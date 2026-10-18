@@ -1,0 +1,33 @@
+# Pebble Health: upload receiver + Home Assistant bridge, and the dashboard/PWA.
+# Both services share ./data (SQLite, WAL mode).  The web service has no login:
+# keep port 8790 on LAN/VPN only.
+services:
+  receiver:
+    build: .
+    container_name: pebble-receiver
+    ports:
+      - "9998:9998"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/data
+      - ./watchapp/watchapp.pbw:/code/watchapp.pbw:ro
+    restart: unless-stopped
+
+  web:
+    build: .
+    container_name: pebble-web
+    command: gunicorn -w 2 -b 0.0.0.0:8790 --access-logfile - dashboard:app
+    ports:
+      - "8790:8790"
+    environment:
+      - WEARER_NAME=${WEARER_NAME:-}
+      - DOWNLOAD_DIR=/downloads
+      # Hostnames the dashboard answers to (DNS-rebinding protection).
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - PEBBLE_TZ=${PEBBLE_TZ:-UTC}
+    volumes:
+      - ./data:/data
+      - ./downloads:/downloads:ro
+    restart: unless-stopped

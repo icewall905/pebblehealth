@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pebble Health</title>
+<meta name="description" content="Sleep, recovery and training from your Pebble watch.">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1513" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pebble Health">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="referrer" content="same-origin">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+<script>
+/* Apply the stored theme before first paint to avoid a flash. */
+try { var t = localStorage.getItem('ph-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="4.5"/><path d="M7.5 12h2.6l1.2-3 1.8 6 1.2-3h2.2"/></svg>
+    <div>
+      <p class="brand-name">Pebble Health</p>
+      <p class="brand-sub" id="sync-line">Loading…</p>
+    </div>
+  </div>
+  <nav class="tabs-top" aria-label="Sections"></nav>
+  <div class="top-actions">
+    <button type="button" class="icon-btn" id="theme-btn" aria-label="Switch theme"></button>
+    <button type="button" class="icon-btn" id="refresh-btn" aria-label="Refresh data"></button>
+  </div>
+</header>
+<div id="banner" class="banner" role="status" hidden></div>
+<main id="main" tabindex="-1"></main>
+<nav class="tabs-bottom" aria-label="Sections"></nav>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<dialog id="dialog" class="sheet"></dialog>
+<noscript><p class="noscript">Pebble Health needs JavaScript to show your data.</p></noscript>
+<script src="app.js" defer></script>
+</body>
+</html>

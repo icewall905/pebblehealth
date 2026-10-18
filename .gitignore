@@ -1,0 +1,36 @@
+# Publish only the finished product. Everything is ignored by default and the
+# product directories are allowed back in; research, ops notes, personal data
+# and other projects stay local.
+/*
+!/README.md
+!/LICENSE
+!/.gitignore
+!/pebblefit/
+/pebblefit/*
+!/pebblefit/bridge/
+!/pebblefit/web/
+!/pebblefit/deploy/
+!/pebblefit/hrv-watch/
+!/pebblefit/history-watch/
+!/pebblefit/today-watch/
+!/pebblefit/tests/
+# Depends on the excluded research tools.
+/pebblefit/tests/test_compare_workout.py
+
+# Never commit data, secrets or build output, wherever they appear.
+.env
+.env.*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.csv
+data/
+downloads/
+build/
+*.pbw
+*.apk
+node_modules/
+.venv*/
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -1,0 +1,56 @@
+{
+  "name": "pebblefit-hrv-diagnostic",
+  "author": "PebbleFit",
+  "version": "1.5.0",
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "PebbleFit HRV",
+    "uuid": "46f68853-0387-4739-985f-0c22a2869f39",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "ppi",
+      "offsets",
+      "ts",
+      "ack",
+      "motion",
+      "command",
+      "ack_ts",
+      "night",
+      "motion_samples",
+      "collector_version",
+      "accel_callbacks",
+      "vibration_samples",
+      "accel_rate_result",
+      "schedule_ok",
+      "schedule_error",
+      "next_wakeup",
+      "motion_source",
+      "phase",
+      "launch",
+      "schedule_ids",
+      "schedule_times",
+      "hrv_events",
+      "zero_ppi_events",
+      "hr_events",
+      "hr_sum",
+      "hr_valid",
+      "firmware",
+      "capacity_limited"
+    ],
+    "capabilities": [
+      "health",
+      "configurable"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}

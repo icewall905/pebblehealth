@@ -1,0 +1,21 @@
+{
+  "name": "pebblefit-history",
+  "author": "PebbleFit",
+  "version": "1.2.0",
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "PebbleFit History",
+    "uuid": "b7a9f1d0-6f64-4c4b-9b2a-0b7b1de0c4a1",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["emery"],
+    "watchapp": {"watchface": false},
+    "messageKeys": [
+      "command", "ack", "ack_seq", "ack_run", "run", "records", "records_count", "start", "seq",
+      "session_data", "session_count", "session_start", "session_seq"
+    ],
+    "capabilities": ["health", "configurable"],
+    "resources": {"media": []}
+  }
+}

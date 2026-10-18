@@ -1,0 +1,22 @@
+{
+  "name": "pebblefit-today",
+  "author": "PebbleFit",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "PebbleFit Today",
+    "uuid": "a6d6f7d4-3023-47e3-9b4d-deae4e234e48",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["emery"],
+    "watchapp": {"watchface": false},
+    "messageKeys": [
+      "command", "status", "ts", "readiness", "readiness_status", "sleep_score", "sleep_min", "restful_min",
+      "hrv_status", "hrv_ms10", "weekly_hrv_ms10", "baseline_nights", "rhr", "breathing10",
+      "load_acute", "load_chronic", "steps"
+    ],
+    "capabilities": ["configurable"],
+    "resources": {"media": []}
+  }
+}
