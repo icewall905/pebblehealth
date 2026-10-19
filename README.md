@@ -63,6 +63,18 @@ rate is reported from them.
 - **Training load:** HR-zone minutes, or session effort (RPE) × minutes. Short-term (7-day) and
   long-term (42-day) averages are computed only over confirmed, unbroken day series.
 
+## Morning briefing (optional)
+
+Every morning a language model writes a short overview at the top of each page: a headline, a two-sentence
+summary, highlights tagged good / neutral / worth watching, one practical focus, and data-quality notes.
+How it stays honest:
+- **The model never calculates.** `bridge/briefing.py` computes compact facts first, already compared with
+  your own history, and the model only phrases them.
+- **Every number is checked.** Each number in the answer must match a fact (rounding allowed). A briefing
+  with invented numbers is retried once, and anything still ungrounded is dropped.
+- **Any OpenAI-compatible endpoint works**, for example a local llama.cpp server. Reasoning models are
+  supported and given a generous token budget, since this runs once a night.
+
 ## Running it
 
 Requirements: Docker, plus a reverse proxy with HTTPS for the PWA and the phone.
@@ -92,6 +104,10 @@ Point your reverse proxy's hostname at port 8790.
 | `AUTH_TOKEN` | empty | Admin bearer token for the receiver's `/fitness` API |
 | `HA_WS_URL`, `HA_TOKEN` | — | Optional: report watch status to Home Assistant |
 | `MQTT_ENABLED`, `MQTT_HOST`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASS` | off | Optional MQTT discovery |
+| `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | off | Optional morning briefing via an OpenAI-compatible endpoint |
+| `BRIEFING_TIME` | `06:00` | When the daily briefing runs (after the night recordings and the 05:15 export) |
+| `LLM_MAX_TOKENS` | `32000` | Output budget, including the model's reasoning |
+| `WEIGHT_PG_DSN`, `WEIGHT_PG_QUERY`, `PROFILE_PG_QUERY` | off | Optional weight history and body profile (sex, birth date, height) from PostgreSQL |
 
 > **Security:** the dashboard has **no login**. Run it on a LAN/VPN-only hostname, or put
 > authentication in front of it (e.g. forward-auth in your proxy) before exposing it.

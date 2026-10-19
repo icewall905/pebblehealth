@@ -31,7 +31,30 @@ services:
       - WEIGHT_PG_DSN=${WEIGHT_PG_DSN:-}
       - WEIGHT_PG_QUERY=${WEIGHT_PG_QUERY:-}
       - PROFILE_PG_QUERY=${PROFILE_PG_QUERY:-}
+      # Optional AI briefing (see bridge/briefing.py).
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_MODEL=${LLM_MODEL:-currentmodel}
+      - LLM_API_KEY=${LLM_API_KEY:-}
     volumes:
       - ./data:/data
       - ./downloads:/downloads:ro
+    restart: unless-stopped
+
+  # Writes the daily AI briefing at BRIEFING_TIME; idle unless LLM_BASE_URL is set.
+  briefing:
+    build: .
+    container_name: pebble-briefing
+    command: python3 briefing.py --daemon
+    environment:
+      - PEBBLE_TZ=${PEBBLE_TZ:-UTC}
+      - WEARER_NAME=${WEARER_NAME:-}
+      - BRIEFING_TIME=${BRIEFING_TIME:-06:00}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_MODEL=${LLM_MODEL:-currentmodel}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - WEIGHT_PG_DSN=${WEIGHT_PG_DSN:-}
+      - WEIGHT_PG_QUERY=${WEIGHT_PG_QUERY:-}
+      - PROFILE_PG_QUERY=${PROFILE_PG_QUERY:-}
+    volumes:
+      - ./data:/data
     restart: unless-stopped

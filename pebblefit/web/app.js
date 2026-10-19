@@ -519,10 +519,10 @@ const CARDS = {
     const v = f.vo2max;
     return card('ready', 'Fitness (VO\u2082max)', { chip: chip('Estimate', '', 'Estimated from your profile, not measured in exercise') },
       v ? [big(fmt(v.value, 1), 'mL/kg/min'),
-        stats([['Fitness age', isNum(v.fitness_age) ? fmt(v.fitness_age) : '—', 'years'], ['Your age', fmt(f.age), 'years'], ['BMI', fmt(v.inputs.bmi, 1)], ['Activity rating', `${v.inputs.pa_rating} of 7`]]),
+        stats([['Your age', fmt(f.age), 'years'], ['BMI', fmt(v.inputs.bmi, 1)], ['Activity rating', `${v.inputs.pa_rating} of 7`]]),
         info('How this is estimated',
           'VO\u2082max comes from a validated non-exercise model (Jackson et al. 1990) using your age, sex, BMI from your weight trend, and an activity rating from your intensity minutes over the last four weeks. It typically lands within about 15% of a lab test.',
-          'Fitness age is the age at which your VO\u2082max equals the average of healthy adults in the Norwegian HUNT 3 study, which is a demanding reference.',
+          'Fitness age is hidden until a measured VO\u2082max is available: against population norms, a profile estimate is too uncertain to be useful.',
           'A walking-based estimate from heart rate and pace is not shown: on the Pebble, wrist heart rate during walking often locks onto arm swing.')]
         : pending('Not enough profile data', (f.missing || []).length ? `Missing: ${f.missing.join(', ')}.` : 'Needs age, sex, height and weight.'));
   },
@@ -1231,21 +1231,55 @@ function pageHead(title, sub, extra) {
   return h('div', { class: 'page-head' }, h('div', null, h('h1', null, title), sub ? h('p', null, sub) : null), extra || null);
 }
 
+/* AI briefing: written nightly from computed facts, numbers checked server-side. */
+async function regenerateBriefing(btn) {
+  btn.disabled = true; btn.textContent = 'Writing…';
+  try {
+    const res = await fetch('api/briefing/run', { method: 'POST' });
+    const out = await res.json();
+    if (out.status === 'disabled') { toast('No language model is configured on the server.', true); return; }
+    toast(out.status === 'busy' ? 'A briefing is already being written.' : 'Writing a new briefing; this takes a minute or two.');
+    const before = (D().briefing || {}).created;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 10000));
+      await load(true);
+      if ((D().briefing || {}).created !== before) { render(); toast('Briefing updated.'); return; }
+    }
+  } catch (e) { toast('Could not start the briefing.', true); }
+  finally { btn.disabled = false; btn.textContent = 'Regenerate'; }
+}
+
+function briefPanel(page, opts = {}) {
+  const b = D().briefing, p = b && b.pages && b.pages[page];
+  if (!p || !(p.headline || p.summary)) return null;
+  const age = nowSec() - b.created, stale = age > 30 * 3600;
+  const when = stale ? fmtDateTime(b.created) : fmtClock(b.created);
+  const btn = opts.regenerate ? h('button', { class: 'btn small', type: 'button', onclick: e => regenerateBriefing(e.currentTarget) }, 'Regenerate') : null;
+  return h('article', { class: 'card wide brief', 'data-m': 'ready' },
+    h('div', { class: 'card-head' }, swatch(), h('h2', null, 'Briefing'), chip(stale ? 'Out of date' : 'AI', stale ? '' : 'exp', 'Written by a language model from your computed numbers')),
+    p.headline ? h('p', { class: 'brief-head' }, p.headline) : null,
+    p.summary ? h('p', { class: 'lede' }, p.summary) : null,
+    (p.highlights || []).length ? h('ul', { class: 'brief-list' }, p.highlights.map(x => h('li', { class: `tone-${x.tone}` }, h('i', { 'aria-hidden': 'true' }), x.text))) : null,
+    p.focus ? h('div', { class: 'brief-focus' }, h('strong', null, 'Focus today'), h('span', null, p.focus)) : null,
+    (p.data_notes || []).length ? info('Data notes', ...p.data_notes) : null,
+    h('p', { class: 'brief-meta' }, `Written ${when} by ${b.model || 'the language model'} from your numbers. Every number is checked against the data.`, btn ? ' ' : null, btn));
+}
+
 const PAGES = {
   today() {
-    return [h('div', { class: 'feed' }, watchHero(), CARDS.sleep(), CARDS.hrv(), CARDS.steps(), CARDS.weight(), CARDS.fitness(), CARDS.intensity(), CARDS.energy(), CARDS.heart(), CARDS.train(), CARDS.rhr(), CARDS.breath(), CARDS.stress(), CARDS.workouts(3), CARDS.device())];
+    return [h('div', { class: 'feed' }, watchHero(), briefPanel('today'), CARDS.sleep(), CARDS.hrv(), CARDS.steps(), CARDS.weight(), CARDS.fitness(), CARDS.intensity(), CARDS.energy(), CARDS.heart(), CARDS.train(), CARDS.rhr(), CARDS.breath(), CARDS.stress(), CARDS.workouts(3), CARDS.device())];
   },
   sleep() {
-    return [pageHead('Sleep', null, rangeSwitch()), h('div', { class: 'feed' }, DETAIL.sleep.render(), CARDS.breath())];
+    return [pageHead('Sleep', null, rangeSwitch()), h('div', { class: 'feed' }, briefPanel('sleep'), DETAIL.sleep.render(), CARDS.breath())];
   },
   recovery() {
-    return [pageHead('Recovery'), h('div', { class: 'feed' }, DETAIL.ready.render().filter(n => n.tagName !== 'P'), CARDS.hrv(), CARDS.rhr(), CARDS.breath(), CARDS.stress())];
+    return [pageHead('Recovery'), h('div', { class: 'feed' }, briefPanel('recovery'), DETAIL.ready.render().filter(n => n.tagName !== 'P'), CARDS.hrv(), CARDS.rhr(), CARDS.breath(), CARDS.stress())];
   },
   training() {
-    return [pageHead('Training', null, rangeSwitch()), h('div', { class: 'feed' }, DETAIL.train.render(), CARDS.fitness(), CARDS.intensity(), CARDS.workouts(5), CARDS.calendar())];
+    return [pageHead('Training', null, rangeSwitch()), h('div', { class: 'feed' }, briefPanel('training'), DETAIL.train.render(), CARDS.fitness(), CARDS.intensity(), CARDS.workouts(5), CARDS.calendar())];
   },
   more() {
-    return [pageHead('More'), h('div', { class: 'feed' }, devicesView(), settingsCard(), themeCard(),
+    return [pageHead('More'), h('div', { class: 'feed' }, briefPanel('more', { regenerate: true }), devicesView(), settingsCard(), themeCard(),
       card('device', 'About', { cls: 'wide' }, h('p', { class: 'lede', style: { marginTop: 0 } }, 'Pebble Health runs on your own server. Your data stays there. Scores marked experimental come from an unvalidated watch sensor and are for personal interest, not medical use.')))];
   },
 };

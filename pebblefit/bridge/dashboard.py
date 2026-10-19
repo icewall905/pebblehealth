@@ -10,6 +10,7 @@ from pathlib import Path
 
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
 
+import briefing
 import fitness
 import watch_api
 
@@ -86,6 +87,12 @@ def api_days():
         return {"error": str(error)}, 400
 
 
+@app.post("/api/briefing/run")
+def api_briefing_run():
+    status = briefing.run_in_background()
+    return {"status": status}, 202 if status == "started" else 200
+
+
 @app.post("/api/pair")
 def api_pair():
     kind = request.args.get("kind", "hrv")
@@ -130,9 +137,10 @@ def index():
 def static_file(name):
     if name.startswith("api/"):
         abort(404)
-    # The service worker must never be cached by the HTTP cache, or app
-    # updates stall; other assets carry a versioned cache in the worker.
-    response = send_from_directory(WEB_DIR, name, max_age=0 if name in ("sw.js", "manifest.webmanifest") else 3600)
+    # Code, styles and the service worker always revalidate (a cheap 304 on
+    # a LAN), so a browser without the worker never runs stale app code after
+    # an update.  Only icons are cached for long.
+    response = send_from_directory(WEB_DIR, name, max_age=86400 if name.startswith("icons/") else 0)
     if name == "manifest.webmanifest":
         response.mimetype = "application/manifest+json"
     return response

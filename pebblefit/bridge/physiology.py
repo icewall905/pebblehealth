@@ -159,7 +159,10 @@ def fitness(body: dict[str, Any] | None, weight_kg: float | None, hr_max: float 
     vo2 = 56.363 + 1.921 * par - 0.381 * age - 0.754 * bmi + 10.987 * (1 if sex == "male" else 0)
     out["vo2max"] = {"value": round(vo2, 1), "method": "profile estimate (Jackson et al. 1990)",
                      "inputs": {"age": age, "bmi": round(bmi, 1), "pa_rating": par},
-                     "fitness_age": fitness_age(vo2, sex), "reference": "HUNT 3 healthy-adult means",
+                     # Hidden until a measured VO2max exists: a profile estimate is too
+                     # uncertain to place against population norms.  fitness_age()
+                     # stays available for that.
+                     "fitness_age": None,
                      "walking_estimate": None,
                      "walking_note": "Not shown: wrist heart rate during walking often locks onto arm swing on the Pebble."}
     out["missing"] = missing

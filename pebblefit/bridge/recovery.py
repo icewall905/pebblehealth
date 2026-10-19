@@ -189,8 +189,11 @@ def nightly_sleep(sessions: list[dict[str, Any]], snapshot_totals: dict[str, tup
         elif snap_s > 0:
             # The 05:15 export often holds only the first part of a night; the
             # running daily total is then more complete, but has no timing.
+            # Sessions covering most of the night still give usable timing.
+            timed = bool(sleep) and sleep_s >= 0.85 * snap_s
             out.append({"night": night.isoformat(), "source": "daily_total", "sleep_s": snap_s,
-                        "restful_s": min(snap_restful, snap_s), "onset": None, "wake": None})
+                        "restful_s": min(snap_restful, snap_s),
+                        "onset": sleep[0][0] if timed else None, "wake": sleep[-1][1] if timed else None})
     return out
 
 

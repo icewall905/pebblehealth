@@ -146,3 +146,11 @@ def test_readiness_uses_seed_from_fifth_night():
     out = r.readiness(n, sleep, None, TODAY, SEED)
     assert out["components"]["hrv"]["provisional"] is True
     assert out["components"]["hrv"]["score"] < 50 and out["status"] == "experimental"
+
+
+def test_near_complete_sessions_keep_timing_with_daily_total():
+    y = TODAY - timedelta(days=1)
+    sn = r.nightly_sleep([{"start": at(y, 23), "seconds": 7 * 3600, "kind": "sleep"}],
+                         {TODAY.isoformat(): (int(7.5 * 3600), 0)})
+    assert sn[0]["source"] == "daily_total" and sn[0]["sleep_s"] == int(7.5 * 3600)
+    assert sn[0]["onset"] == at(y, 23) and sn[0]["wake"] == at(TODAY, 6)

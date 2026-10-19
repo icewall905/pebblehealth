@@ -37,6 +37,7 @@ def connect():
     CREATE TABLE IF NOT EXISTS day_confirmations(day TEXT PRIMARY KEY,status TEXT,confirmed_at INTEGER);
     CREATE TABLE IF NOT EXISTS collector_reports(ts INTEGER PRIMARY KEY,received INTEGER,payload TEXT);
     CREATE TABLE IF NOT EXISTS hrv_sessions(id TEXT PRIMARY KEY, ts INTEGER, payload TEXT);
+    CREATE TABLE IF NOT EXISTS briefings(id INTEGER PRIMARY KEY, created INTEGER, day TEXT, model TEXT, status TEXT, payload TEXT, error TEXT, seconds REAL);
     CREATE TABLE IF NOT EXISTS weights(day TEXT PRIMARY KEY, kg REAL, source TEXT);
     CREATE TABLE IF NOT EXISTS sleep_sessions(id TEXT PRIMARY KEY, start INTEGER, seconds INTEGER, kind TEXT);
     """)
@@ -226,6 +227,8 @@ def summary(days=42):
         seed=json.loads(seed_row['value']) if seed_row else None
         weight_model.sync(db, now)
         weight=weight_model.history(db, datetime.fromtimestamp(now,TZ).date())
+        import briefing as briefing_model  # deferred: briefing imports this module
+        brief=briefing_model.latest(db)
         body_row=db.execute("SELECT value FROM settings WHERE key='body_profile'").fetchone()
         fit_minutes=[(r[0],r[1],r[2]) for r in db.execute('SELECT ts,hr,steps FROM minutes WHERE ts>=? ORDER BY ts',(now-35*86400,))]
         active_today={}
@@ -272,7 +275,7 @@ def summary(days=42):
       "observations": sorted(observed,key=lambda r:r["ts"])[-15000:], "confirmations": confirmations,
       "hrv": {"status": "diagnostic_only" if hrv else "not_collected", "ts": hrv["ts"] if hrv else None,
               "diagnostic": json.loads(hrv["payload"]) if hrv else None, "sessions": hrv_recent, "quality": quality, "analysis":recovery},
-      "stress": recovery["stress"], "recovery": nightly, "weight": weight,
+      "stress": recovery["stress"], "recovery": nightly, "weight": weight, "briefing": brief,
       "fitness": physiology.fitness(json.loads(body_row['value']) if body_row else None,
                                     (weight or {}).get('latest',{}).get('trend_kg'), config.get('hr_max'),
                                     fit_minutes, active_today, TZ, datetime.fromtimestamp(now,TZ).date()),

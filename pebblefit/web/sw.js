@@ -3,7 +3,7 @@
    /api/summary: network-first, falling back to the last good response.
    Writes (POST/PUT/…) and every other request go straight to the network. */
 'use strict';
-const VERSION = 'v4';
+const VERSION = 'v5';
 const SHELL_CACHE = 'pebble-health-shell-' + VERSION;
 const DATA_CACHE = 'pebble-health-data-v1';
 const SHELL = [
