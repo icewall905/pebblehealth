@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "schedule.h"
 #define CAPACITY 512
-#define COLLECTOR_VERSION 150
+#define COLLECTOR_VERSION 151
 static Window *window;
 static TextLayer *text;
 static uint16_t intervals[CAPACITY];
@@ -32,6 +32,10 @@ static void send_result(void);
 static void exit_night(void *context) { if(quiet) window_stack_pop_all(false); }
 static void night_timeout(void *context){night_watchdog=NULL;collector_phase=4;check_phone(NULL);app_timer_register(1000,exit_night,NULL);}
 static void close_soon(void) { if(quiet) app_timer_register(2500,exit_night,NULL); }
+/* Closing the watch app also stops the phone script, which would abort an
+ * upload still in flight; at night wait for its confirmation (bounded). */
+static AppTimer *upload_wait;
+static void upload_wait_over(void *context){upload_wait=NULL;exit_night(NULL);}
 static void schedule_nights(void) {
   schedule_ok=0;schedule_error=0;next_wakeup=0;
   for(int i=0;i<6;i++){schedule_ids[i]=-1;schedule_times[i]=0;}
@@ -42,7 +46,9 @@ static void schedule_nights(void) {
   int weekdays[6],hours[6];
   int n=night_slots(local.tm_wday,local.tm_hour*3600+local.tm_min*60+local.tm_sec,weekdays,hours);
   for(int i=0;i<n;i++) {
-    time_t target=clock_to_timestamp((WeekDay)(weekdays[i]+1),hours[i],0);
+    /* Pebble maps an explicit weekday equal to today to *next week*, even for
+     * a later time today, so same-day slots must use TODAY. */
+    time_t target=clock_to_timestamp(weekdays[i]==local.tm_wday?TODAY:(WeekDay)(weekdays[i]+1),hours[i],0);
     WakeupId id=wakeup_schedule(target,0x485256,false);
     for(int retry=0;id==E_RANGE && retry<4;retry++){target+=120;id=wakeup_schedule(target,0x485256,false);}
     schedule_ids[i]=id;schedule_times[i]=target;
@@ -168,7 +174,7 @@ static void start(void) {
   check_phone(NULL);
   accel_raw_data_service_subscribe(25,on_motion);
   accel_rate_result=accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
-  if(quiet){if(night_watchdog)app_timer_cancel(night_watchdog);night_watchdog=app_timer_register(220000,night_timeout,NULL);}
+  if(quiet){if(night_watchdog)app_timer_cancel(night_watchdog);night_watchdog=app_timer_register(260000,night_timeout,NULL);}
 }
 static void tick(struct tm *tm,TimeUnits changed) {
   if(!running)return;
@@ -200,7 +206,9 @@ static void inbox(DictionaryIterator *iter,void *context){
     if(!matches || running)return;
     ready=false;count=0;persist_delete(30);
     text_layer_set_text(text,code==1?"Raw intervals saved.\nReview on Health.\nDown: new measurement":"Saved on phone.\nUpload retries later.\nDown: new measurement");
-    if(quiet && auto_pending){auto_pending=false;slot_started=true;start();}else close_soon();
+    if(quiet && auto_pending){auto_pending=false;slot_started=true;start();}
+    else if(quiet && code==11){if(!upload_wait)upload_wait=app_timer_register(45000,upload_wait_over,NULL);}
+    else{if(upload_wait){app_timer_cancel(upload_wait);upload_wait=NULL;}close_soon();}
   }
   else if(code==2 || code==3){paired=false;text_layer_set_text(text,"Pair in phone app:\nPebbleFit HRV settings.\nMeasurement kept.\nSelect: retry upload");}
   else{ready=count>0;snprintf(display,sizeof(display),"Upload error %d\nMeasurement kept.\nSelect: retry",code>=1000?code-1000:code);text_layer_set_text(text,display);}
@@ -238,7 +246,7 @@ int main(void){
   text_layer_set_text(text,"Saved measurement.\nSelect: retry upload\nDown: new test");
  }
  app_timer_register(1500,check_phone,NULL);
- if(quiet){app_timer_register(4000,begin_night,NULL);night_watchdog=app_timer_register(220000,night_timeout,NULL);}
+ if(quiet){app_timer_register(4000,begin_night,NULL);night_watchdog=app_timer_register(260000,night_timeout,NULL);}
  health_service_events_subscribe(on_health,NULL);tick_timer_service_subscribe(SECOND_UNIT,tick);
  app_event_loop();
  health_service_set_hrv_sample_period(0);health_service_set_heart_rate_sample_period(0);

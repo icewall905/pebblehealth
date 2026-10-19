@@ -45,7 +45,9 @@ static void schedule_daily(void) {
   /* Select the local calendar day before converting.  Pebble's explicit
    * weekday conversion can interpret a past local time as next week's slot. */
   int day=history_daily_weekday(local.tm_wday,local.tm_hour*3600+local.tm_min*60+local.tm_sec);
-  target=clock_to_timestamp((WeekDay)(day+1),5,15);
+  /* An explicit weekday equal to today means next week on Pebble, even for a
+   * later time today, so today's slot must use TODAY. */
+  target=clock_to_timestamp(day==local.tm_wday?TODAY:(WeekDay)(day+1),5,15);
   daily_wakeup=wakeup_schedule(target,DAILY_COOKIE,false);
   for (int retry=0; daily_wakeup==E_RANGE && retry<4; retry++) { target+=120; daily_wakeup=wakeup_schedule(target,DAILY_COOKIE,false); }
   if (daily_wakeup<0) APP_LOG(APP_LOG_LEVEL_ERROR,"Daily history wakeup failed: %ld",(long)daily_wakeup);
