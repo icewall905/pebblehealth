@@ -503,7 +503,25 @@ const TRAIN_STATUS = { ready: 'Tracking', warming: 'Building baseline' };
 /* ================================================================== *
  * Cards
  * ================================================================== */
+/* Weight: daily points plus the 7-day trend on the same date spine. */
+const signedKg = v => isNum(v) ? `${v > 0 ? '+' : v < 0 ? '−' : '±'}${fmt(Math.abs(v), 1)}` : '—';
+function weightItems(span) {
+  const m = new Map(((D().weight || {}).entries || []).map(e => [e.date, e]));
+  const items = bucket(span, d => ({ v: (m.get(d) || {}).kg ?? null, alt: (m.get(d) || {}).trend_kg ?? null }), 'avg');
+  // Weekly buckets (1-year view) keep the trend too.
+  return span.length > 60 ? items.map((i, k) => ({ ...i, alt: avg(span.slice(k * 7, k * 7 + 7).map(d => (m.get(d) || {}).trend_kg)) })) : items;
+}
+
 const CARDS = {
+  weight() {
+    const w = D().weight;
+    if (!w || !w.latest) return null;
+    const stale = w.days_since_latest > 0;
+    return card('weight', 'Weight', { link: 'weight' },
+      big(fmt(w.latest.kg, 1), stale ? `kg · ${fmtDayShort(w.latest.date)}` : 'kg today'),
+      stats([['7-day trend', fmt(w.latest.trend_kg, 1), 'kg'], ['Last week', signedKg(w.change_7d_kg), 'kg'], ['Last 4 weeks', signedKg(w.change_28d_kg), 'kg']]),
+      lineChart({ items: weightItems(dateSpan(28)), H: 110, alt: true, fmtV: v => fmt(v, 1), unit: 'kg', label: 'Weight, last 4 weeks' }));
+  },
   sleep() {
     const sl = rec().sleep || {}, nights = rec().sleep_nights || [];
     const has = isNum(sl.sleep_s);
@@ -728,6 +746,21 @@ function vital(m, label, value, fallback) {
 function chartW() { return window.innerWidth >= 720 ? 640 : 340; }
 
 const DETAIL = {
+  weight: {
+    title: 'Weight', m: 'weight',
+    render() {
+      const w = D().weight || {}, span = dateSpan(S.range), items = weightItems(span);
+      const inRange = (w.entries || []).filter(e => e.date >= span[0]);
+      const kgs = inRange.map(e => e.kg);
+      const change = inRange.length > 1 ? inRange[inRange.length - 1].trend_kg - inRange[0].trend_kg : null;
+      return [card('weight', 'Weight', { cls: 'wide' },
+        items.some(i => isNum(i.v)) ? [lineChart({ items, W: chartW(), H: 200, alt: true, fmtV: v => fmt(v, 1), unit: 'kg', label: 'Weight and 7-day trend' }),
+          legend([['line', 'Weigh-ins'], ['dash', '7-day trend']]),
+          stats([['Latest', fmt((w.latest || {}).kg, 1), 'kg'], ['Change in range', signedKg(change), 'kg'], ['Lowest', fmt(kgs.length ? Math.min(...kgs) : null, 1), 'kg'], ['Weigh-ins', `${kgs.length}`]])]
+          : pending('No weigh-ins in this range', 'Weight comes from your configured weight source and syncs every 30 minutes.'),
+        info('About the trend', 'Day-to-day weight swings with water, salt and meal timing. The 7-day trend averages your weigh-ins over the past week and is the better guide to real change.'))];
+    },
+  },
   ready: {
     title: 'Readiness', m: 'ready', noRange: true,
     render() {
@@ -1142,7 +1175,7 @@ const TABS = [
   { id: 'today', label: 'Today' }, { id: 'sleep', label: 'Sleep' }, { id: 'recovery', label: 'Recovery' },
   { id: 'training', label: 'Training' }, { id: 'more', label: 'More' },
 ];
-const DETAIL_TAB = { ready: 'recovery', sleep: 'sleep', hrv: 'recovery', rhr: 'recovery', breath: 'recovery', stress: 'recovery', steps: 'today', heart: 'today', train: 'training', workouts: 'training', calendar: 'training', device: 'more' };
+const DETAIL_TAB = { weight: 'today', ready: 'recovery', sleep: 'sleep', hrv: 'recovery', rhr: 'recovery', breath: 'recovery', stress: 'recovery', steps: 'today', heart: 'today', train: 'training', workouts: 'training', calendar: 'training', device: 'more' };
 
 function route() {
   const raw = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
@@ -1162,7 +1195,7 @@ function pageHead(title, sub, extra) {
 
 const PAGES = {
   today() {
-    return [h('div', { class: 'feed' }, watchHero(), CARDS.sleep(), CARDS.hrv(), CARDS.steps(), CARDS.heart(), CARDS.train(), CARDS.rhr(), CARDS.breath(), CARDS.stress(), CARDS.workouts(3), CARDS.device())];
+    return [h('div', { class: 'feed' }, watchHero(), CARDS.sleep(), CARDS.hrv(), CARDS.steps(), CARDS.weight(), CARDS.heart(), CARDS.train(), CARDS.rhr(), CARDS.breath(), CARDS.stress(), CARDS.workouts(3), CARDS.device())];
   },
   sleep() {
     return [pageHead('Sleep', null, rangeSwitch()), h('div', { class: 'feed' }, DETAIL.sleep.render(), CARDS.breath())];

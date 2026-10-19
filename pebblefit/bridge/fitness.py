@@ -9,6 +9,7 @@ import time
 import training
 import hrv as hrv_analytics
 import recovery as recovery_model
+import weight as weight_model
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -35,6 +36,7 @@ def connect():
     CREATE TABLE IF NOT EXISTS day_confirmations(day TEXT PRIMARY KEY,status TEXT,confirmed_at INTEGER);
     CREATE TABLE IF NOT EXISTS collector_reports(ts INTEGER PRIMARY KEY,received INTEGER,payload TEXT);
     CREATE TABLE IF NOT EXISTS hrv_sessions(id TEXT PRIMARY KEY, ts INTEGER, payload TEXT);
+    CREATE TABLE IF NOT EXISTS weights(day TEXT PRIMARY KEY, kg REAL, source TEXT);
     CREATE TABLE IF NOT EXISTS sleep_sessions(id TEXT PRIMARY KEY, start INTEGER, seconds INTEGER, kind TEXT);
     """)
     if 'ignored' not in {r[1] for r in db.execute('PRAGMA table_info(workouts)')}:
@@ -221,6 +223,8 @@ def summary(days=42):
         # (see research/seed_baseline.py); never raw history.
         seed_row=db.execute("SELECT value FROM settings WHERE key='baseline_seed'").fetchone()
         seed=json.loads(seed_row['value']) if seed_row else None
+        weight_model.sync(db, now)
+        weight=weight_model.history(db, datetime.fromtimestamp(now,TZ).date())
         sleep_rows=[dict(r) for r in db.execute('SELECT start,seconds,kind FROM sleep_sessions WHERE start>=? ORDER BY start',(now-70*86400,))]
         # Hourly snapshots carry the watch's running sleep total for the current
         # local day; its daily maximum is the previous night's sleep.
@@ -260,7 +264,7 @@ def summary(days=42):
       "observations": sorted(observed,key=lambda r:r["ts"])[-15000:], "confirmations": confirmations,
       "hrv": {"status": "diagnostic_only" if hrv else "not_collected", "ts": hrv["ts"] if hrv else None,
               "diagnostic": json.loads(hrv["payload"]) if hrv else None, "sessions": hrv_recent, "quality": quality, "analysis":recovery},
-      "stress": recovery["stress"], "recovery": nightly,
+      "stress": recovery["stress"], "recovery": nightly, "weight": weight,
       "model": {"hr": "Edwards-style zone minutes v1; at least 80% HR coverage", "rpe": "Session minutes × perceived effort (1–10)",
                 "note": "Separate load scales. Unrecorded days are unknown; fitness/fatigue estimates need confirmed rest days and recording coverage."}}
 

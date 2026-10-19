@@ -23,6 +23,7 @@
   --m-steps: #0055aa;  --t-steps: #0055aa;
   --m-breath: #55aaaa; --t-breath: #2f6d6d;
   --m-device: #556b63; --t-device: #3d4f48;
+  --m-weight: #aa5500; --t-weight: #8a4500;
 
   --ok: #00733a;
   --warn: #8a5800;
@@ -55,7 +56,7 @@
     --line: #2a3531; --line-2: #36433e; --focus: #55aaff;
     --m-ready: #55ffaa; --t-ready: #55ffaa; --m-sleep: #aaaaff; --t-sleep: #aaaaff; --m-hrv: #55ffff; --t-hrv: #55ffff;
     --m-heart: #ff5555; --t-heart: #ff8a8a; --m-stress: #ffaa00; --t-stress: #ffc655; --m-train: #ff55ff; --t-train: #ff9cff;
-    --m-steps: #55aaff; --t-steps: #8cc6ff; --m-breath: #aaffff; --t-breath: #aaffff; --m-device: #8fa39b; --t-device: #b8c7c0;
+    --m-steps: #55aaff; --t-steps: #8cc6ff; --m-breath: #aaffff; --t-breath: #aaffff; --m-device: #8fa39b; --t-device: #b8c7c0; --m-weight: #ffaa55; --t-weight: #ffc68c;
     --ok: #55ffaa; --warn: #ffc655; --bad: #ff8a8a; --gap: #3a4642;
     --watch: #050807; --watch-bezel: #2c3733; --shadow: none;
     color-scheme: dark;
@@ -66,7 +67,7 @@
   --line: #2a3531; --line-2: #36433e; --focus: #55aaff;
   --m-ready: #55ffaa; --t-ready: #55ffaa; --m-sleep: #aaaaff; --t-sleep: #aaaaff; --m-hrv: #55ffff; --t-hrv: #55ffff;
   --m-heart: #ff5555; --t-heart: #ff8a8a; --m-stress: #ffaa00; --t-stress: #ffc655; --m-train: #ff55ff; --t-train: #ff9cff;
-  --m-steps: #55aaff; --t-steps: #8cc6ff; --m-breath: #aaffff; --t-breath: #aaffff; --m-device: #8fa39b; --t-device: #b8c7c0;
+  --m-steps: #55aaff; --t-steps: #8cc6ff; --m-breath: #aaffff; --t-breath: #aaffff; --m-device: #8fa39b; --t-device: #b8c7c0; --m-weight: #ffaa55; --t-weight: #ffc68c;
   --ok: #55ffaa; --warn: #ffc655; --bad: #ff8a8a; --gap: #3a4642;
   --watch: #050807; --watch-bezel: #2c3733; --shadow: none;
   color-scheme: dark;
@@ -210,6 +211,7 @@ main {
 [data-m="steps"]  { --mc: var(--m-steps);  --tc: var(--t-steps); }
 [data-m="breath"] { --mc: var(--m-breath); --tc: var(--t-breath); }
 [data-m="device"] { --mc: var(--m-device); --tc: var(--t-device); }
+[data-m="weight"] { --mc: var(--m-weight); --tc: var(--t-weight); }
 
 .big { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .big .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }

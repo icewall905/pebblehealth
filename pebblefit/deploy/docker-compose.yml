@@ -27,6 +27,9 @@ services:
       # Hostnames the dashboard answers to (DNS-rebinding protection).
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
       - PEBBLE_TZ=${PEBBLE_TZ:-UTC}
+      # Optional weight history from PostgreSQL (see bridge/weight.py).
+      - WEIGHT_PG_DSN=${WEIGHT_PG_DSN:-}
+      - WEIGHT_PG_QUERY=${WEIGHT_PG_QUERY:-}
     volumes:
       - ./data:/data
       - ./downloads:/downloads:ro
