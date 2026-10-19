@@ -35,11 +35,15 @@ def test_plain_string_highlights_are_accepted():
     assert out["sleep"]["highlights"] == []
 
 
-def test_next_run_is_today_or_tomorrow(monkeypatch):
+def test_next_run_walks_through_the_daily_times(monkeypatch):
     tz = ZoneInfo("UTC")
-    monkeypatch.setenv("BRIEFING_TIME", "06:00")
-    assert b._next_run(datetime(2026, 10, 19, 5, 0, tzinfo=tz)).hour == 6
-    assert b._next_run(datetime(2026, 10, 19, 7, 0, tzinfo=tz)).day == 20
+    monkeypatch.setenv("BRIEFING_TIME", "05:00,05:40")
+    t, first = b._next_run(datetime(2026, 10, 19, 4, 0, tzinfo=tz))
+    assert (t.hour, t.minute, first) == (5, 0, True)
+    t, first = b._next_run(datetime(2026, 10, 19, 5, 10, tzinfo=tz))
+    assert (t.hour, t.minute, first) == (5, 40, False)
+    t, first = b._next_run(datetime(2026, 10, 19, 6, 0, tzinfo=tz))
+    assert (t.day, t.hour, first) == (20, 5, True)
 
 
 def test_disabled_without_endpoint(monkeypatch):

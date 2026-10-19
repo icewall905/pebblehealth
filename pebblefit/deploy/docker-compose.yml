@@ -48,7 +48,7 @@ services:
     environment:
       - PEBBLE_TZ=${PEBBLE_TZ:-UTC}
       - WEARER_NAME=${WEARER_NAME:-}
-      - BRIEFING_TIME=${BRIEFING_TIME:-06:00}
+      - BRIEFING_TIME=${BRIEFING_TIME:-05:00,05:40}
       - LLM_BASE_URL=${LLM_BASE_URL:-}
       - LLM_MODEL=${LLM_MODEL:-currentmodel}
       - LLM_API_KEY=${LLM_API_KEY:-}

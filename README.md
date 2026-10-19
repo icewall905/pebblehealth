@@ -105,7 +105,7 @@ Point your reverse proxy's hostname at port 8790.
 | `HA_WS_URL`, `HA_TOKEN` | — | Optional: report watch status to Home Assistant |
 | `MQTT_ENABLED`, `MQTT_HOST`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASS` | off | Optional MQTT discovery |
 | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | off | Optional morning briefing via an OpenAI-compatible endpoint |
-| `BRIEFING_TIME` | `06:00` | When the daily briefing runs (after the night recordings and the 05:15 export) |
+| `BRIEFING_TIME` | `05:00,05:40` | Daily briefing times; later times only run if new watch data arrived since the last briefing |
 | `LLM_MAX_TOKENS` | `32000` | Output budget, including the model's reasoning |
 | `WEIGHT_PG_DSN`, `WEIGHT_PG_QUERY`, `PROFILE_PG_QUERY` | off | Optional weight history and body profile (sex, birth date, height) from PostgreSQL |
 

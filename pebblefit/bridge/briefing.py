@@ -10,8 +10,10 @@ Configuration (environment):
   LLM_BASE_URL     OpenAI-compatible endpoint, e.g. http://llm.lan:8080/v1
   LLM_MODEL        model name or alias (default "currentmodel")
   LLM_API_KEY      optional bearer token
-  BRIEFING_TIME    local time for the daily run (default 06:00, after the
-                   night measurements and the 05:15 history export)
+  BRIEFING_TIME    local time(s) for the daily run, comma separated (default
+                   "05:00,05:40"). Later times in a day only run when new
+                   watch data has arrived since the last briefing, e.g. the
+                   05:15 history export with last night's sleep sessions.
 
 Run ``python3 briefing.py --daemon`` as its own service, or ``--once``.
 """
@@ -432,19 +434,43 @@ def run_in_background() -> str:
     return "started"
 
 
-def _next_run(now: datetime) -> datetime:
-    hh, mm = (int(x) for x in os.environ.get("BRIEFING_TIME", "06:00").split(":"))
-    target = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
-    return target if target > now else target + timedelta(days=1)
+def _times() -> list[tuple[int, int]]:
+    out = []
+    for part in os.environ.get("BRIEFING_TIME", "05:00,05:40").split(","):
+        hh, mm = part.strip().split(":")
+        out.append((int(hh), int(mm)))
+    return sorted(out)
+
+
+def _next_run(now: datetime) -> tuple[datetime, bool]:
+    """Next scheduled time, and whether it is the first of its day."""
+    times = _times()
+    for i, (hh, mm) in enumerate(times):
+        target = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        if target > now:
+            return target, i == 0
+    hh, mm = times[0]
+    return now.replace(hour=hh, minute=mm, second=0, microsecond=0) + timedelta(days=1), True
+
+
+def new_data_since_last_briefing() -> bool:
+    with fitness.connect() as db:
+        last = db.execute("SELECT max(created) FROM briefings WHERE status='ok'").fetchone()[0] or 0
+        newest = max(db.execute("SELECT coalesce(max(received),0) FROM reports").fetchone()[0],
+                     db.execute("SELECT coalesce(max(received),0) FROM collector_reports").fetchone()[0])
+    return newest > last
 
 
 def daemon() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     fitness.connect().close()
     while True:
-        nxt = _next_run(datetime.now(fitness.TZ))
-        log.info("next briefing at %s", nxt.isoformat())
+        nxt, first = _next_run(datetime.now(fitness.TZ))
+        log.info("next briefing at %s%s", nxt.isoformat(), "" if first else " (only if new data)")
         time.sleep(max(1, (nxt - datetime.now(fitness.TZ)).total_seconds()))
+        if not first and not new_data_since_last_briefing():
+            log.info("no new data since the last briefing; skipping")
+            continue
         for attempt in range(3):
             status = run()
             log.info("briefing run: %s", status)
