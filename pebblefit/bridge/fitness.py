@@ -10,6 +10,7 @@ import training
 import hrv as hrv_analytics
 import recovery as recovery_model
 import weight as weight_model
+import physiology
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -225,6 +226,13 @@ def summary(days=42):
         seed=json.loads(seed_row['value']) if seed_row else None
         weight_model.sync(db, now)
         weight=weight_model.history(db, datetime.fromtimestamp(now,TZ).date())
+        body_row=db.execute("SELECT value FROM settings WHERE key='body_profile'").fetchone()
+        fit_minutes=[(r[0],r[1],r[2]) for r in db.execute('SELECT ts,hr,steps FROM minutes WHERE ts>=? ORDER BY ts',(now-35*86400,))]
+        active_today={}
+        for r in db.execute("""SELECT ts,json_extract(payload,'$.status.active_kcal') k FROM reports WHERE source='watchapp' AND ts>=?""",(now-2*86400,)):
+            if r['k'] is not None:
+                d=datetime.fromtimestamp(r['ts'],TZ).date().isoformat()
+                active_today[d]=max(active_today.get(d,0),int(r['k']))
         sleep_rows=[dict(r) for r in db.execute('SELECT start,seconds,kind FROM sleep_sessions WHERE start>=? ORDER BY start',(now-70*86400,))]
         # Hourly snapshots carry the watch's running sleep total for the current
         # local day; its daily maximum is the previous night's sleep.
@@ -265,6 +273,9 @@ def summary(days=42):
       "hrv": {"status": "diagnostic_only" if hrv else "not_collected", "ts": hrv["ts"] if hrv else None,
               "diagnostic": json.loads(hrv["payload"]) if hrv else None, "sessions": hrv_recent, "quality": quality, "analysis":recovery},
       "stress": recovery["stress"], "recovery": nightly, "weight": weight,
+      "fitness": physiology.fitness(json.loads(body_row['value']) if body_row else None,
+                                    (weight or {}).get('latest',{}).get('trend_kg'), config.get('hr_max'),
+                                    fit_minutes, active_today, TZ, datetime.fromtimestamp(now,TZ).date()),
       "model": {"hr": "Edwards-style zone minutes v1; at least 80% HR coverage", "rpe": "Session minutes × perceived effort (1–10)",
                 "note": "Separate load scales. Unrecorded days are unknown; fitness/fatigue estimates need confirmed rest days and recording coverage."}}
 

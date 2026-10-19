@@ -30,6 +30,7 @@ services:
       # Optional weight history from PostgreSQL (see bridge/weight.py).
       - WEIGHT_PG_DSN=${WEIGHT_PG_DSN:-}
       - WEIGHT_PG_QUERY=${WEIGHT_PG_QUERY:-}
+      - PROFILE_PG_QUERY=${PROFILE_PG_QUERY:-}
     volumes:
       - ./data:/data
       - ./downloads:/downloads:ro

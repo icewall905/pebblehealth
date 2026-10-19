@@ -7,6 +7,10 @@ Configure with two environment variables:
 Rows are copied into the local ``weights`` table at most every SYNC_SECONDS,
 so the dashboard stays fast and keeps showing history if the source is down.
 Without configuration nothing is synced and the dashboard hides weight.
+
+Optionally PROFILE_PG_QUERY (same connection) returns one row of
+(sex, birthdate, height_cm) for the fitness estimates; it is stored in the
+settings table as 'body_profile'.
 """
 from __future__ import annotations
 
@@ -37,6 +41,7 @@ def sync(db, now: float | None = None, force: bool = False) -> str:
         import psycopg
         with psycopg.connect(os.environ["WEIGHT_PG_DSN"], connect_timeout=5) as pg:
             rows = pg.execute(os.environ["WEIGHT_PG_QUERY"]).fetchall()
+            profile = pg.execute(os.environ["PROFILE_PG_QUERY"]).fetchone() if os.environ.get("PROFILE_PG_QUERY") else None
     except Exception as error:  # the source being down must never break the dashboard
         log.warning("weight sync failed: %s", error)
         # Back off for a full interval so a dead source can't slow every page.
@@ -52,6 +57,12 @@ def sync(db, now: float | None = None, force: bool = False) -> str:
             continue
         if 20 <= kg <= 400:
             clean.append((day, kg))
+    if profile:
+        import json
+        sex, birth, height = (x.decode() if isinstance(x, bytes) else x for x in profile)
+        body = {"sex": str(sex).lower() if sex else None, "birthdate": str(birth)[:10] if birth else None,
+                "height_cm": float(height) if height else None}
+        db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES('body_profile',?)", (json.dumps(body),))
     # Several weigh-ins on one day keep the last one returned by the query.
     db.executemany("INSERT OR REPLACE INTO weights(day,kg,source) VALUES(?,?,'external')", clean)
     db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES('weight_synced',?)", (str(now),))

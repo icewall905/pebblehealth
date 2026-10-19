@@ -513,6 +513,44 @@ function weightItems(span) {
 }
 
 const CARDS = {
+  fitness() {
+    const f = D().fitness;
+    if (!f) return null;
+    const v = f.vo2max;
+    return card('ready', 'Fitness (VO\u2082max)', { chip: chip('Estimate', '', 'Estimated from your profile, not measured in exercise') },
+      v ? [big(fmt(v.value, 1), 'mL/kg/min'),
+        stats([['Fitness age', isNum(v.fitness_age) ? fmt(v.fitness_age) : '—', 'years'], ['Your age', fmt(f.age), 'years'], ['BMI', fmt(v.inputs.bmi, 1)], ['Activity rating', `${v.inputs.pa_rating} of 7`]]),
+        info('How this is estimated',
+          'VO\u2082max comes from a validated non-exercise model (Jackson et al. 1990) using your age, sex, BMI from your weight trend, and an activity rating from your intensity minutes over the last four weeks. It typically lands within about 15% of a lab test.',
+          'Fitness age is the age at which your VO\u2082max equals the average of healthy adults in the Norwegian HUNT 3 study, which is a demanding reference.',
+          'A walking-based estimate from heart rate and pace is not shown: on the Pebble, wrist heart rate during walking often locks onto arm swing.')]
+        : pending('Not enough profile data', (f.missing || []).length ? `Missing: ${f.missing.join(', ')}.` : 'Needs age, sex, height and weight.'));
+  },
+
+  intensity() {
+    const f = D().fitness, it = f && f.intensity;
+    if (!it) return null;
+    const days = new Map(it.days.map(d => [d.date, d]));
+    const items = dateSpan(7).map(d => { const r = days.get(d); return { key: d, label: d, v: r ? r.moderate + 2 * r.vigorous : 0 }; });
+    return card('train', 'Intensity minutes', {},
+      big(fmt(it.this_week), `of ${it.goal} this week`),
+      h('div', { class: 'progress', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': it.goal, 'aria-valuenow': it.this_week, 'aria-label': 'Weekly intensity minutes' },
+        h('span', { style: { width: `${clamp(100 * it.this_week / it.goal, 0, 100)}%` } })),
+      barChart({ items, H: 100, unit: 'min', label: 'Intensity minutes, last 7 days' }),
+      info('How intensity minutes are counted',
+        `Minutes at 64% of your maximum heart rate (${fmt(f.hr_max)} bpm) count as moderate, at 77% as vigorous, and vigorous minutes count double, as in the WHO guideline of 150 minutes a week.`,
+        `Minutes where the watch's heart rate matched your step rhythm are left out (${fmt(it.cadence_lock_rejected)} in the last 5 weeks): that is the sensor following arm swing, not your pulse.`));
+  },
+
+  energy() {
+    const f = D().fitness, e = f && f.energy;
+    if (!e) return null;
+    return card('steps', 'Energy', {},
+      stats([['Resting burn', fmt(e.bmr_kcal), 'kcal/day'], ['Active today', isNum(e.active_kcal_today) ? fmt(e.active_kcal_today) : '—', 'kcal'],
+        ['Day total', isNum(e.active_kcal_today) ? fmt(e.bmr_kcal + e.active_kcal_today) : '—', 'kcal']]),
+      info('About these numbers', 'Resting burn uses the Mifflin-St Jeor equation from your weight, height, age and sex. Active calories are the watch\'s own figure, which can run high; "total" adds the full day\'s resting burn.'));
+  },
+
   weight() {
     const w = D().weight;
     if (!w || !w.latest) return null;
@@ -1195,7 +1233,7 @@ function pageHead(title, sub, extra) {
 
 const PAGES = {
   today() {
-    return [h('div', { class: 'feed' }, watchHero(), CARDS.sleep(), CARDS.hrv(), CARDS.steps(), CARDS.weight(), CARDS.heart(), CARDS.train(), CARDS.rhr(), CARDS.breath(), CARDS.stress(), CARDS.workouts(3), CARDS.device())];
+    return [h('div', { class: 'feed' }, watchHero(), CARDS.sleep(), CARDS.hrv(), CARDS.steps(), CARDS.weight(), CARDS.fitness(), CARDS.intensity(), CARDS.energy(), CARDS.heart(), CARDS.train(), CARDS.rhr(), CARDS.breath(), CARDS.stress(), CARDS.workouts(3), CARDS.device())];
   },
   sleep() {
     return [pageHead('Sleep', null, rangeSwitch()), h('div', { class: 'feed' }, DETAIL.sleep.render(), CARDS.breath())];
@@ -1204,7 +1242,7 @@ const PAGES = {
     return [pageHead('Recovery'), h('div', { class: 'feed' }, DETAIL.ready.render().filter(n => n.tagName !== 'P'), CARDS.hrv(), CARDS.rhr(), CARDS.breath(), CARDS.stress())];
   },
   training() {
-    return [pageHead('Training', null, rangeSwitch()), h('div', { class: 'feed' }, DETAIL.train.render(), CARDS.workouts(5), CARDS.calendar())];
+    return [pageHead('Training', null, rangeSwitch()), h('div', { class: 'feed' }, DETAIL.train.render(), CARDS.fitness(), CARDS.intensity(), CARDS.workouts(5), CARDS.calendar())];
   },
   more() {
     return [pageHead('More'), h('div', { class: 'feed' }, devicesView(), settingsCard(), themeCard(),
